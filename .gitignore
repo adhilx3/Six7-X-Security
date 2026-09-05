@@ -1,0 +1,19 @@
+# Environment variables / secrets
+.env
+
+# Per-server bot data (don't publish real server configs)
+data/guild_config.json
+
+# Python
+__pycache__/
+*.pyc
+venv/
+*.egg-info/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
