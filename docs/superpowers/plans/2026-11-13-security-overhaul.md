@@ -178,3 +178,4 @@
 - [ ] **Step 3: Implement new configuration slash commands in `cogs/config_cog.py`, integrate `init_db` and `cogs.antinuke` in `bot.py`, and update `README.md`**
 - [ ] **Step 4: Run full test suite across all modules**
 - [ ] **Step 5: Commit Task 7**
+

@@ -134,3 +134,4 @@ async def test_lockdown_active_young_account_action_taken(antiraid_cog, temp_db)
     with patch("cogs.antiraid.send_log", new_callable=AsyncMock):
         await antiraid_cog.on_member_join(member)
         member.kick.assert_called_once()
+

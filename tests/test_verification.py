@@ -88,3 +88,4 @@ async def test_verification_success_assigns_roles(temp_db):
         user.remove_roles.assert_called_once_with(unverify_role, reason="Passed verification")
         interaction.response.send_message.assert_called_once()
         mock_send_log.assert_called_once()
+
