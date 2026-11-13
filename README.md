@@ -39,9 +39,17 @@ A high-performance, modular security, anti-nuke, and moderation bot built with `
 - **Captcha Challenge**: Randomized 5-character alphanumeric challenge modal requiring user input to defeat automated raid selfbots.
 - **Persistent View**: Registered in `setup_hook` to ensure buttons and modals continue working seamlessly across bot restarts.
 
-### 💾 Async SQLite Database (`aiosqlite`)
-- Replaces legacy JSON storage with crash-safe, transaction-backed SQLite (`data/six7_security.db`).
-- **Automatic Migration**: Seamlessly imports existing `data/guild_config.json` on first run without manual intervention.
+### 🌐 Embedded Web Dashboard (FastAPI & Tailwind)
+- **Centralized Command Center**: Real-time browser-based dashboard running concurrently inside the bot process.
+- **Dual Authentication**:
+  - **Master Password**: Instant access with `DASHBOARD_PASSWORD` from `.env`.
+  - **Discord OAuth2**: Allows server administrators to log in using their Discord accounts with automatic permissions validation.
+- **Interactive Tabbed Controls**:
+  - **Anti-Nuke**: Visual sliders for action limits, punishment protocol selector, and immunity whitelist table with 1-click add/remove.
+  - **Anti-Raid**: Sensitivity controls, account age filter, and **One-Click Emergency Lockdown Toggle**.
+  - **AutoMod**: Tag-based banned words manager, scam/phishing link shield toggle, executable file shield toggle, and spam thresholds.
+  - **Verification**: Gate mode picker (Button Click vs Captcha Modal) and verified member role assignment.
+  - **Warnings Table**: Searchable infractions history with 1-click warning revocation.
 
 ---
 
@@ -149,9 +157,28 @@ python bot.py
 
 ---
 
-## 5. Running Tests
+## 5. Deploying to Railway (Bot + Web Dashboard)
 
-Run the full automated test suite:
+Six7 Security Bot and its embedded Web Dashboard are pre-configured for **Railway** deployment.
+
+1. **Push Repository**: Connect your GitHub repository to Railway.
+2. **Environment Variables**: In your Railway Project dashboard, go to the **Variables** tab and set:
+   - `DISCORD_TOKEN`: Your Discord bot token.
+   - `DASHBOARD_PASSWORD`: A secure master password of your choice.
+   - `SESSION_SECRET`: Any random 32-character secret string.
+3. **Generate Public Domain**:
+   - Go to **Settings → Networking**.
+   - Click **Generate Domain** (e.g. `six7-security-production.up.railway.app`).
+   - Railway will automatically route external HTTPS traffic to your FastAPI dashboard!
+4. **Access Dashboard**:
+   - Visit `https://<your-domain>.up.railway.app` in your browser.
+   - Log in with your `DASHBOARD_PASSWORD` to immediately configure server defenses!
+
+---
+
+## 6. Running Tests
+
+Run the full automated test suite (56 tests covering security, automod, antiraid, and web dashboard):
 ```bash
 pytest -v
 ```
