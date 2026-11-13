@@ -35,6 +35,7 @@ def create_mock_member(user_id=222, top_role_pos=50, owner_id=999):
     member.id = user_id
     member.mention = f"<@{user_id}>"
     member.guild = MagicMock(spec=discord.Guild)
+    member.guild.id = 12345
     member.guild.owner_id = owner_id
     member.top_role = MagicMock(spec=discord.Role)
     member.top_role.position = top_role_pos
@@ -106,3 +107,4 @@ async def test_warn_persists_in_db(moderation_cog, temp_db):
         assert len(warns) == 1
         assert warns[0]["reason"] == "Spamming in chat"
         assert warns[0]["moderator_id"] == mod.id
+

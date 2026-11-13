@@ -160,8 +160,8 @@ class AntiNuke(commands.Cog):
                 entry_ts = getattr(entry, "created_at", None)
                 if entry_ts and abs(now_ts - entry_ts.timestamp()) > 10:
                     continue
-                if target_id is not None and getattr(entry, "target", None):
-                    if entry.target.id == target_id:
+                if target_id is not None:
+                    if getattr(entry, "target", None) and entry.target.id == target_id:
                         return entry.user
                 else:
                     return entry.user

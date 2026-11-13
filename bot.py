@@ -35,10 +35,7 @@ class SecurityBot(commands.Bot):
         if migrated:
             log.info(f"Migrated {migrated} guild configuration(s) from JSON to SQLite.")
 
-        # 2. Register persistent views
-        self.add_view(VerifyView())
-
-        # 3. Load modular extensions
+        # 2. Load modular extensions
         for ext in (
             "cogs.antinuke",
             "cogs.moderation",

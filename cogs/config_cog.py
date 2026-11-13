@@ -30,12 +30,6 @@ class ConfigCog(commands.Cog):
         await update_guild_config(interaction.guild_id, log_channel_id=channel.id, db_path=self.db_path)
         await interaction.response.send_message(f"✅ Log channel set to {channel.mention}.", ephemeral=True)
 
-    @app_commands.command(name="set-verification-role", description="Set the role given to verified members.")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def set_verification_role(self, interaction: discord.Interaction, role: discord.Role):
-        await update_guild_config(interaction.guild_id, verification_role_id=role.id, db_path=self.db_path)
-        await interaction.response.send_message(f"✅ Verification role set to {role.mention}.", ephemeral=True)
-
     # ---------- Anti-Nuke Configuration ----------
 
     @app_commands.command(name="antinuke-toggle", description="Enable or disable anti-nuke protection.")

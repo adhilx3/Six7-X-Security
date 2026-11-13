@@ -24,6 +24,9 @@ class AntiRaid(commands.Cog):
 
     async def enable_lockdown(self, guild: discord.Guild, reason: str = "Anti-Raid lockdown"):
         cfg = await get_antiraid_config(guild.id, db_path=self.db_path)
+        if cfg.get("lockdown_active"):
+            return
+
         orig_vl = getattr(guild.verification_level, "name", str(guild.verification_level))
         await update_antiraid_config(
             guild.id,

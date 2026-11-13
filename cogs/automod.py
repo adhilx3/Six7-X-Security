@@ -20,13 +20,17 @@ LEGIT_DOMAINS = (
     "https://discord.gg/",
     "https://www.discord.com/",
     "https://www.discord.gg/",
+    "https://cdn.discordapp.com/",
+    "https://media.discordapp.net/",
+    "https://discordapp.com/",
+    "https://www.discordapp.com/",
     "https://steamcommunity.com/",
     "https://www.steamcommunity.com/",
 )
 
 SCAM_REGEXES = [
     re.compile(
-        r"https?://(?:www\.)?(?:[a-zA-Z0-9-]+\.)*(?:discorcl|dlscord|disord|discordapp|nitro-gift|discord-nitro|steamcommunity-tradeoffer)[^\s]*",
+        r"https?://(?:www\.)?(?:[a-zA-Z0-9-]+\.)*(?:discorcl|dlscord|disord|nitro-gift|discord-nitro|steamcommun[li1]ty|steamcornmunity|stearncommunity|steamcommunity-tradeoffer)[^\s]*",
         re.IGNORECASE,
     ),
     re.compile(
@@ -34,7 +38,7 @@ SCAM_REGEXES = [
         re.IGNORECASE,
     ),
     re.compile(
-        r"https?://(?:www\.)?steamcommunity[^\s/]*-(?:gift|trade|promo)[^\s]*",
+        r"https?://(?:www\.)?steamcommun[a-z0-9-]*-(?:gift|trade|promo)[^\s]*",
         re.IGNORECASE,
     ),
 ]
@@ -72,13 +76,13 @@ def is_word_match(content: str, banned_words: list[str]) -> bool:
 
 
 def is_scam_link(content: str) -> bool:
-    for word in content.split():
-        if word.startswith("http://") or word.startswith("https://"):
-            if any(word.lower().startswith(legit) for legit in LEGIT_DOMAINS):
-                continue
-            for pattern in SCAM_REGEXES:
-                if pattern.search(word):
-                    return True
+    urls = re.findall(r"https?://[^\s><)\"']+", content)
+    for url in urls:
+        if any(url.lower().startswith(legit) for legit in LEGIT_DOMAINS):
+            continue
+        for pattern in SCAM_REGEXES:
+            if pattern.search(url):
+                return True
     return False
 
 

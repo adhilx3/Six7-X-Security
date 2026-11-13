@@ -10,8 +10,15 @@ async def send_log(bot: commands.Bot, guild: discord.Guild, embed: discord.Embed
     """Utility other cogs can import to push an embed to the configured log channel."""
     if guild is None:
         return
+    guild_id = getattr(guild, "id", None)
+    if not isinstance(guild_id, int):
+        return
+
     db_path = getattr(bot, "db_path", None)
-    config = await get_guild_config(guild.id, db_path=db_path)
+    if not isinstance(db_path, str):
+        db_path = None
+
+    config = await get_guild_config(guild_id, db_path=db_path)
     channel_id = config.get("log_channel_id")
     if not channel_id:
         return

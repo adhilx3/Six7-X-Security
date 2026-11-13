@@ -66,7 +66,13 @@ async def handle_verification_success(interaction: discord.Interaction, db_path:
         color=discord.Color.green(),
         timestamp=datetime.datetime.now(datetime.timezone.utc),
     )
-    await send_log(getattr(interaction, "client", None), interaction.guild, embed)
+    client = getattr(interaction, "client", None)
+    if db_path and client and not isinstance(getattr(client, "db_path", None), str):
+        try:
+            client.db_path = db_path
+        except AttributeError:
+            pass
+    await send_log(client, interaction.guild, embed)
 
 
 class CaptchaModal(discord.ui.Modal, title="Verification Challenge"):

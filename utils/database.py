@@ -392,47 +392,66 @@ async def migrate_from_json(json_path: str = None, db_path: str = None) -> int:
         return 0
 
     count = 0
-    for guild_str, cfg in data.items():
+    path = _get_db_path(db_path)
+    async with aiosqlite.connect(path) as db:
+        for guild_str, cfg in data.items():
+            try:
+                guild_id = int(guild_str)
+            except ValueError:
+                continue
+
+            async with db.execute(
+                "SELECT 1 FROM guild_config WHERE guild_id = ? AND log_channel_id IS NOT NULL", (guild_id,)
+            ) as cur:
+                if await cur.fetchone():
+                    continue  # Already configured in SQLite, do not overwrite with legacy JSON
+
+            await update_guild_config(
+                guild_id,
+                db_path=db_path,
+                log_channel_id=cfg.get("log_channel_id"),
+                verification_role_id=cfg.get("verification_role_id"),
+                verification_channel_id=cfg.get("verification_channel_id"),
+                unverified_role_id=cfg.get("unverified_role_id"),
+            )
+
+            am = cfg.get("automod", {})
+            await update_automod_config(
+                guild_id,
+                db_path=db_path,
+                enabled=1 if am.get("enabled", True) else 0,
+                banned_words=am.get("banned_words", []),
+                block_invites=1 if am.get("block_invites", True) else 0,
+                invite_whitelist=am.get("invite_whitelist", []),
+                whitelist_user_ids=cfg.get("whitelist_user_ids", []),
+                whitelist_role_ids=cfg.get("whitelist_role_ids", []),
+                max_mentions=am.get("max_mentions", 5),
+                max_caps_percent=am.get("max_caps_percent", 70),
+                spam_message_count=am.get("spam_message_count", 5),
+                spam_time_window=am.get("spam_time_window", 5),
+            )
+
+            ar = cfg.get("antiraid", {})
+            await update_antiraid_config(
+                guild_id,
+                db_path=db_path,
+                enabled=1 if ar.get("enabled", True) else 0,
+                join_threshold=ar.get("join_threshold", 5),
+                join_time_window=ar.get("join_time_window", 10),
+                min_account_age_days=ar.get("min_account_age_days", 3),
+                lockdown_active=1 if ar.get("lockdown_active", False) else 0,
+                action_on_raid=ar.get("action_on_raid", "kick"),
+            )
+            count += 1
+
+    if count > 0 and os.path.exists(jpath):
         try:
-            guild_id = int(guild_str)
-        except ValueError:
-            continue
+            migrated_path = jpath + ".migrated"
+            if os.path.exists(migrated_path):
+                os.remove(migrated_path)
+            os.rename(jpath, migrated_path)
+        except OSError:
+            pass
 
-        await update_guild_config(
-            guild_id,
-            db_path=db_path,
-            log_channel_id=cfg.get("log_channel_id"),
-            verification_role_id=cfg.get("verification_role_id"),
-            verification_channel_id=cfg.get("verification_channel_id"),
-            unverified_role_id=cfg.get("unverified_role_id"),
-        )
-
-        am = cfg.get("automod", {})
-        await update_automod_config(
-            guild_id,
-            db_path=db_path,
-            enabled=1 if am.get("enabled", True) else 0,
-            banned_words=am.get("banned_words", []),
-            block_invites=1 if am.get("block_invites", True) else 0,
-            invite_whitelist=am.get("invite_whitelist", []),
-            whitelist_user_ids=cfg.get("whitelist_user_ids", []),
-            whitelist_role_ids=cfg.get("whitelist_role_ids", []),
-            max_mentions=am.get("max_mentions", 5),
-            max_caps_percent=am.get("max_caps_percent", 70),
-            spam_message_count=am.get("spam_message_count", 5),
-            spam_time_window=am.get("spam_time_window", 5),
-        )
-
-        ar = cfg.get("antiraid", {})
-        await update_antiraid_config(
-            guild_id,
-            db_path=db_path,
-            enabled=1 if ar.get("enabled", True) else 0,
-            join_threshold=ar.get("join_threshold", 5),
-            join_time_window=ar.get("join_time_window", 10),
-            min_account_age_days=ar.get("min_account_age_days", 3),
-            lockdown_active=1 if ar.get("lockdown_active", False) else 0,
-            action_on_raid=ar.get("action_on_raid", "kick"),
-        )
-        count += 1
     return count
+
