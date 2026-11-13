@@ -1,14 +1,19 @@
 # Environment variables / secrets
 .env
 
-# Per-server bot data (don't publish real server configs)
+# Per-server bot data & database (don't publish real server configs or tokens)
 data/guild_config.json
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.migrated
 
-# Python
+# Python & Testing
 __pycache__/
 *.pyc
 venv/
 *.egg-info/
+.pytest_cache/
 
 # Editor
 .vscode/
