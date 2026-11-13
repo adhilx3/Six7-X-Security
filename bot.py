@@ -1,13 +1,16 @@
 import asyncio
 import logging
 import os
+import time
 
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+import uvicorn
 
 from utils.database import init_db, migrate_from_json
 from cogs.verification import VerifyView
+from web.app import create_app
 
 load_dotenv()
 
@@ -27,15 +30,34 @@ intents.message_content = True  # required to scan message text for automod
 class SecurityBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents, help_command=None)
+        self.start_time: float = time.time()
+        self.web_server: uvicorn.Server = None
+        self.web_task: asyncio.Task = None
 
     async def setup_hook(self):
+        self.start_time = time.time()
+
         # 1. Initialize SQLite storage and migrate legacy JSON if present
         await init_db()
         migrated = await migrate_from_json()
         if migrated:
             log.info(f"Migrated {migrated} guild configuration(s) from JSON to SQLite.")
 
-        # 2. Load modular extensions
+        # 2. Launch embedded web dashboard
+        port = int(os.getenv("PORT", 8080))
+        web_app = create_app(self)
+        config = uvicorn.Config(
+            web_app,
+            host="0.0.0.0",
+            port=port,
+            loop="asyncio",
+            log_level="warning"
+        )
+        self.web_server = uvicorn.Server(config)
+        self.web_task = asyncio.create_task(self.web_server.serve())
+        log.info(f"Web Dashboard online at http://0.0.0.0:{port}")
+
+        # 3. Load modular extensions
         for ext in (
             "cogs.antinuke",
             "cogs.moderation",
@@ -52,11 +74,19 @@ class SecurityBot(commands.Bot):
         synced = await self.tree.sync()
         log.info(f"Synced {len(synced)} slash command(s).")
 
+    async def close(self):
+        if self.web_server:
+            self.web_server.should_exit = True
+        await super().close()
+
     async def on_ready(self):
         log.info(f"Logged in as {self.user} (ID: {self.user.id})")
         await self.change_presence(
             activity=discord.Activity(type=discord.ActivityType.watching, name="for threats 🛡️")
         )
+
+
+Six7Bot = SecurityBot
 
 
 async def main():
