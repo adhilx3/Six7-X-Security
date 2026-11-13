@@ -1,90 +1,157 @@
-# Discord Security Bot
+# Six7 Security Discord Bot 🛡️
 
-A modular security/moderation bot built with `discord.py`, featuring:
+A high-performance, modular security, anti-nuke, and moderation bot built with `discord.py` and `aiosqlite`.
 
-- **Auto-Mod** — banned word filter, invite link blocking, mass-mention detection, excessive caps detection, spam rate-limiting (with auto-timeout)
-- **Anti-Raid** — detects mass joins in a short window, flags/kicks/bans new/suspicious accounts, auto-lockdown mode
-- **Verification** — button-based verification panel that grants a role, persists across restarts
-- **Logging** — logs message edits/deletes, joins/leaves, bans/unbans, and all mod/automod actions to a channel
-- **Manual Moderation** — `/kick`, `/ban`, `/timeout`, `/warn`, `/purge`
-- **Slash-command configuration** — no need to edit code or restart the bot to change settings
+---
 
-## 1. Create the bot application
+## Features
 
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) → **New Application**.
-2. Go to the **Bot** tab → **Add Bot**.
+### 🛡️ Anti-Nuke Defense Engine
+- **Audit Log Inspection**: Monitors channel creation/deletion, role creation/deletion, kicks, bans, webhook modifications, and bot additions in real-time.
+- **Sliding-Window Rate Limiting**: Detects rogue administrators or compromised accounts attempting destructive actions in short bursts.
+- **Punitive Actions**: Automatically strips dangerous administrative permissions/roles (`administrator`, `manage_guild`, `manage_roles`, `manage_channels`, `ban_members`, `kick_members`) or kicks/bans the offender.
+- **Anti-Bot Join Protection**: Automatically kicks unauthorized bots invited by non-owners and strips dangerous roles from the inviter.
+- **Immunity System**: Server owner is permanently immune, with support for an independent Anti-Nuke whitelist for trusted co-owners or bots.
+
+### 🚨 Hardened Anti-Raid & Lockdown
+- **Mass Join Detection**: Automatically tracks join velocity within configurable sliding windows.
+- **Smart Channel Lockdown**: Automatically sets `@everyone` to `send_messages=False` across all public text channels while **persisting original permission states**.
+- **Clean State Restoration**: When `/lockdown state:false` is executed, channels that originally had no override cleanly revert to category inheritance (no broken empty overwrites), and channels with prior custom permissions revert to their exact previous state.
+- **Verification Escalation & Restore**: Temporarily raises server verification level during raids and restores previous level upon unlock.
+- **New Account Enforcement**: Flags suspicious new accounts during peacetime, and automatically kicks/bans them during active raids or lockdowns.
+
+### 🤖 Intelligent Auto-Mod
+- **Regex Word Boundaries (`\b`)**: Eliminates false positives (e.g. banning `ass` will never block words like `grass`, `classic`, or `compass`).
+- **Homoglyph / Leetspeak Normalization**: Catches obfuscated bypasses like `a$$`, `@ss`, `cl@ssic`.
+- **Phishing & Scam Link Blocker**: Detects fake Discord Nitro scams, token grabbers, and typosquatted domains (e.g. `discorcl.gift`, `dlscord.app`, `steamcommunity-tradeoffer.gift`) with instant message deletion and a 1-hour timeout.
+- **Dangerous File Attachment Blocker**: Detects and deletes malicious executables (`.exe`, `.scr`, `.bat`, `.cmd`, `.vbs`, `.msi`, `.ps1`, `.jar`) and warns the uploader.
+- **Duplicate / Copypasta Spam**: Detects identical messages repeated across channels and applies automatic timeouts.
+- **Anti-Ghostping Logger**: Detects deleted messages containing user or role mentions within 15 seconds of posting and logs the author, channel, and content.
+- **Invite & Mass Mention Blocking**: Detects disguised and raw Discord server invites and mass mentions.
+
+### 🔨 Hierarchy-Safe Moderation & Persistent Warnings
+- **Role Hierarchy Protection**: Prevents moderators or the bot from executing actions against members with equal or higher roles, or the server owner.
+- **Persistent Warning History**: Backed by SQLite; warnings survive bot restarts and provide full auditability (`/warn`, `/warnings`, `/unwarn`, `/clearwarnings`).
+- **Comprehensive Moderation Commands**: `/kick`, `/ban` (with message history deletion presets), `/timeout`, `/warn`, `/purge`.
+
+### 🔒 Verification (Button & Captcha Modal)
+- **Button Verification**: One-click verification panel granting a verified role and removing an unverified role.
+- **Captcha Challenge**: Randomized 5-character alphanumeric challenge modal requiring user input to defeat automated raid selfbots.
+- **Persistent View**: Registered in `setup_hook` to ensure buttons and modals continue working seamlessly across bot restarts.
+
+### 💾 Async SQLite Database (`aiosqlite`)
+- Replaces legacy JSON storage with crash-safe, transaction-backed SQLite (`data/six7_security.db`).
+- **Automatic Migration**: Seamlessly imports existing `data/guild_config.json` on first run without manual intervention.
+
+---
+
+## 1. Setup Discord Developer Application
+
+1. Open the [Discord Developer Portal](https://discord.com/developers/applications) → **New Application**.
+2. Navigate to the **Bot** tab → **Add Bot**.
 3. Under **Privileged Gateway Intents**, enable:
-   - **Server Members Intent**
-   - **Message Content Intent**
-4. Copy the **bot token** (Bot tab → Reset Token / Copy).
+   - **Server Members Intent** (required for join/leave events, anti-raid, and anti-nuke).
+   - **Message Content Intent** (required for automod scanning).
+4. Copy the **Bot Token**.
 
-## 2. Invite the bot to your server
+---
 
-1. Go to **OAuth2 → URL Generator**.
-2. Scopes: check `bot` and `applications.commands`.
-3. Bot permissions: at minimum check
-   `Kick Members`, `Ban Members`, `Moderate Members`, `Manage Messages`, `Manage Roles`,
-   `Manage Server` (for lockdown verification-level changes), `View Channels`, `Send Messages`, `Embed Links`, `Read Message History`.
-4. Open the generated URL and add the bot to your server.
+## 2. Invite Bot to Server
 
-**Important:** the bot's role must be positioned **above** any roles you want it to manage (e.g. above a "muted" or "unverified" role), and above roles of members you might need to kick/ban.
+1. Navigate to **OAuth2 → URL Generator**.
+2. Check `bot` and `applications.commands`.
+3. Check required permissions:
+   `Administrator` (recommended for full Anti-Nuke role stripping and channel lockdowns), or at minimum:
+   `Manage Server`, `Manage Roles`, `Manage Channels`, `Kick Members`, `Ban Members`, `Moderate Members`, `Manage Messages`, `View Audit Log`, `View Channels`, `Send Messages`, `Embed Links`, `Read Message History`.
+4. Open the generated URL and invite the bot.
+5. **Role Hierarchy**: In Server Settings → Roles, drag the bot's role **above** all moderator, member, and unverified roles.
 
-## 3. Install and configure
+---
+
+## 3. Installation & Run
 
 ```bash
-cd security-bot
+git clone https://github.com/adhilx3/Six7-X-Security.git
+cd Six7-X-Security
+
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate        # on Windows: venv\Scripts\activate
+source venv/bin/activate        # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 
+# Configure environment
 cp .env.example .env
-# then edit .env and paste your bot token:
-# DISCORD_TOKEN=your_token_here
+# Edit .env and paste your DISCORD_TOKEN
 ```
 
-## 4. Run the bot
-
+Run the bot:
 ```bash
 python bot.py
 ```
 
-You should see log lines confirming each cog loaded and that slash commands synced. It can take up to an hour for global slash commands to fully propagate the first time (usually much faster).
+---
 
-## 5. Configure your server (as an admin, in Discord)
+## 4. Slash Command Reference
 
-Run these slash commands in your server:
-
-| Command | Purpose |
+### Anti-Nuke Commands
+| Command | Description |
 |---|---|
-| `/set-log-channel #channel` | Where all security logs get sent |
-| `/set-verification-role @role` | Role given to members who verify |
-| `/setup-verification` | Posts the verify button in the current channel |
-| `/automod-toggle enabled:true` | Turn auto-mod on/off |
-| `/add-banned-word word:...` | Add to the word filter |
-| `/set-max-mentions count:5` | Mass-mention threshold |
-| `/whitelist-user user:@someone` | Exempt a user (e.g. other bots) from auto-mod |
-| `/antiraid-toggle enabled:true` | Turn anti-raid on/off |
-| `/set-join-threshold count:5 seconds:10` | Raid trigger sensitivity |
-| `/set-min-account-age days:3` | Accounts younger than this get flagged during a raid |
-| `/set-raid-action action:Kick` | Kick / Ban / Log only for suspicious joins during a raid |
-| `/lockdown state:true` | Manually toggle lockdown mode |
-| `/security-status` | See your full current configuration |
+| `/antinuke-toggle enabled:<bool>` | Turn Anti-Nuke defense on/off |
+| `/antinuke-config` | Configure action window, thresholds for channels/roles/members, and punishment (`strip_roles`, `ban`, `kick`) |
+| `/antinuke-whitelist-add target:<User> [reason]` | Add a trusted user or bot to Anti-Nuke immunity |
+| `/antinuke-whitelist-remove target:<User>` | Remove an account from Anti-Nuke immunity |
+| `/antinuke-whitelist-list` | View all Anti-Nuke whitelisted accounts |
 
-## How it works
+### Anti-Raid & Lockdown Commands
+| Command | Description |
+|---|---|
+| `/antiraid-toggle enabled:<bool>` | Turn Anti-Raid mass-join detection on/off |
+| `/set-join-threshold count:<int> seconds:<int>` | Adjust join velocity sensitivity |
+| `/set-min-account-age days:<int>` | Minimum account age to bypass raid action |
+| `/set-raid-action action:<Kick\|Ban\|Log only>` | Action for suspicious accounts during raids |
+| `/lockdown state:<bool>` | Toggle server lockdown mode (locks/restores public channel permissions) |
 
-- **Storage:** Settings are stored per-server in `data/guild_config.json` (created automatically). This is fine for small-to-mid servers; swap in SQLite/Postgres in `utils/storage.py` if you need heavier scale or multiple bot instances.
-- **Anti-raid logic:** Tracks join timestamps per server in memory. If the number of joins within the configured window crosses the threshold, it flips on `lockdown_active`, raises the server's verification level, and starts auto-kicking/banning new accounts younger than the configured minimum age until you turn lockdown off with `/lockdown state:false`.
-- **Verification:** Uses a Discord UI `Button` with a persistent `custom_id`, registered in the cog's `__init__`, so it keeps working even after the bot restarts (no need to re-post the panel).
-- **Auto-mod:** Runs on every non-bot message; checks banned words → invite links → mass mentions → caps % → message-rate spam (which also applies a 10-minute timeout on trip).
+### Auto-Mod Commands
+| Command | Description |
+|---|---|
+| `/automod-toggle enabled:<bool>` | Turn Auto-Mod filtering on/off |
+| `/add-banned-word word:<str>` | Add a phrase to the word boundary filter |
+| `/remove-banned-word word:<str>` | Remove a phrase from the word filter |
+| `/set-max-mentions count:<int>` | Set maximum mentions allowed per message |
+| `/whitelist-user user:<Member>` | Exempt a user from AutoMod chat checks |
+| `/whitelist-role role:<Role>` | Exempt a role from AutoMod chat checks |
+| `/automod-scam-toggle enabled:<bool>` | Toggle phishing & fake Nitro scam blocker |
+| `/automod-attachments-toggle enabled:<bool>` | Toggle executable file blocker |
 
-## Extending it
+### Moderation & Warning Commands
+| Command | Description |
+|---|---|
+| `/warn member:<Member> reason:<str>` | Issue a formal warning and persist in SQLite |
+| `/warnings [member:<Member>]` | View warning history for a user or the entire guild |
+| `/unwarn warning_id:<int>` | Delete a warning case by ID |
+| `/clearwarnings member:<Member>` | Clear all warnings for a user |
+| `/kick member:<Member> [reason]` | Kick a member (with hierarchy checks) |
+| `/ban member:<Member> [delete_days] [reason]` | Ban a member with message history purge |
+| `/timeout member:<Member> minutes:<int> [reason]` | Timeout a member |
+| `/purge amount:<1-100>` | Bulk delete recent channel messages |
 
-- Add new filters inside `cogs/automod.py` — follow the existing pattern of checking a setting, then calling `self._take_action(...)`.
-- Add new slash-command settings inside `cogs/config_cog.py`, then use `get_guild_config()` in whichever cog needs to read them.
-- Everything mod-related that should be visible to admins should go through `send_log()` in `cogs/logging_cog.py`, so it always lands in the same log channel.
+### Setup & Status Commands
+| Command | Description |
+|---|---|
+| `/set-log-channel channel:<TextChannel>` | Set channel where all security logs are delivered |
+| `/set-verification-mode mode:<Button\|Captcha>` | Choose between button or captcha modal verification |
+| `/set-verification-role role:<Role>` | Role granted upon passing verification |
+| `/set-unverified-role role:<Role>` | Role automatically assigned to new joins until verified |
+| `/setup-verification` | Post the persistent verification panel in the current channel |
+| `/security-status` | View full dashboard of all security modules, thresholds, and statistics |
 
-## Notes & limitations
+---
 
-- `message_content` intent must be enabled both in the Developer Portal **and** in `bot.py` (already done here) — required for the word filter and caps checks to see message text.
-- The bot needs `Manage Server` permission to auto-raise verification level during a raid; without it, lockdown still works (kicking/banning new joins) but won't touch the server's verification level.
-- This is a single-process bot with JSON storage — good for one to a handful of servers. For a public multi-server bot at scale, move to a real database and consider sharding.
+## 5. Running Tests
+
+Run the full automated test suite:
+```bash
+pytest -v
+```

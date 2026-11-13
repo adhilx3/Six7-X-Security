@@ -6,6 +6,9 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
+from utils.database import init_db, migrate_from_json
+from cogs.verification import VerifyView
+
 load_dotenv()
 
 logging.basicConfig(
@@ -17,7 +20,7 @@ log = logging.getLogger("security-bot")
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
-intents.members = True          # required for join/leave events, account age checks
+intents.members = True          # required for join/leave events, account age checks, anti-nuke
 intents.message_content = True  # required to scan message text for automod
 
 
@@ -26,7 +29,18 @@ class SecurityBot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents, help_command=None)
 
     async def setup_hook(self):
+        # 1. Initialize SQLite storage and migrate legacy JSON if present
+        await init_db()
+        migrated = await migrate_from_json()
+        if migrated:
+            log.info(f"Migrated {migrated} guild configuration(s) from JSON to SQLite.")
+
+        # 2. Register persistent views
+        self.add_view(VerifyView())
+
+        # 3. Load modular extensions
         for ext in (
+            "cogs.antinuke",
             "cogs.moderation",
             "cogs.automod",
             "cogs.antiraid",
@@ -37,6 +51,7 @@ class SecurityBot(commands.Bot):
             await self.load_extension(ext)
             log.info(f"Loaded extension: {ext}")
 
+        # 4. Sync application slash commands
         synced = await self.tree.sync()
         log.info(f"Synced {len(synced)} slash command(s).")
 
