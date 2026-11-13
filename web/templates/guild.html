@@ -37,7 +37,7 @@
         <div>
             <button 
                 type="button" 
-                onclick="toggleLockdown({{ guild.id }}, {{ 'true' if antiraid_cfg.lockdown_active else 'false' }})"
+                onclick="toggleLockdown('{{ guild.id }}', {{ 'true' if antiraid_cfg.lockdown_active else 'false' }})"
                 class="px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg transition duration-200 flex items-center gap-2 {% if antiraid_cfg.lockdown_active %}bg-discord-green hover:bg-discord-green/90 text-white shadow-emerald-500/20{% else %}bg-discord-red hover:bg-discord-red/90 text-white shadow-red-500/20{% endif %}"
             >
                 <i data-lucide="{% if antiraid_cfg.lockdown_active %}unlock{% else %}lock{% endif %}" class="w-4 h-4"></i>
@@ -138,7 +138,7 @@
                 <div class="flex items-center gap-2">
                     <input type="text" id="whitelist-target-id" placeholder="Discord User / Bot ID" class="px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-xs w-48">
                     <input type="text" id="whitelist-reason" placeholder="Reason (e.g. Co-Owner)" class="px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-xs w-48 hidden md:block">
-                    <button type="button" onclick="addWhitelist({{ guild.id }})" class="px-3.5 py-2 rounded-xl bg-discord-blurple hover:bg-discord-blurple/90 text-white font-semibold text-xs transition flex items-center gap-1.5">
+                    <button type="button" onclick="addWhitelist('{{ guild.id }}')" class="px-3.5 py-2 rounded-xl bg-discord-blurple hover:bg-discord-blurple/90 text-white font-semibold text-xs transition flex items-center gap-1.5">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                         Add
                     </button>
@@ -163,7 +163,7 @@
                             <td class="py-3 px-3">{{ w.reason or 'No reason provided' }}</td>
                             <td class="py-3 px-3 text-gray-500">{{ w.created_at[:10] if w.created_at else 'Unknown' }}</td>
                             <td class="py-3 px-3 text-right">
-                                <button type="button" onclick="removeWhitelist({{ guild.id }}, {{ w.target_id }})" class="text-red-400 hover:text-red-300 font-medium">
+                                <button type="button" onclick="removeWhitelist('{{ guild.id }}', '{{ w.target_id }}')" class="text-red-400 hover:text-red-300 font-medium">
                                     Remove
                                 </button>
                             </td>
@@ -385,7 +385,7 @@
                             <td class="py-3 px-3 font-mono text-gray-500">{{ w.moderator_id }}</td>
                             <td class="py-3 px-3 text-gray-500">{{ w.created_at[:16] if w.created_at else 'Unknown' }}</td>
                             <td class="py-3 px-3 text-right">
-                                <button type="button" onclick="deleteWarning({{ guild.id }}, {{ w.id }})" class="text-red-400 hover:text-red-300 font-semibold">
+                                <button type="button" onclick="deleteWarning('{{ guild.id }}', {{ w.id }})" class="text-red-400 hover:text-red-300 font-semibold">
                                     Revoke
                                 </button>
                             </td>
@@ -404,7 +404,7 @@
 
 {% block scripts %}
 <script>
-    const GUILD_ID = {{ guild.id }};
+    const GUILD_ID = "{{ guild.id }}";
     initTagInput({{ automod_cfg.banned_words|tojson }});
 
     async function saveAntinuke() {

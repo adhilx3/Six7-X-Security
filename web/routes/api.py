@@ -78,11 +78,14 @@ async def modify_whitelist(
 ):
     user = require_admin(guild_id, request)
     action = payload.get("action")
-    target_id = payload.get("target_id")
+    raw_target_id = payload.get("target_id")
 
     if not action or action not in {"add", "remove"}:
         raise HTTPException(status_code=400, detail="Action must be 'add' or 'remove'.")
-    if not target_id or not isinstance(target_id, int):
+    
+    try:
+        target_id = int(raw_target_id)
+    except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail="Valid integer target_id is required.")
 
     if action == "add":
@@ -114,14 +117,33 @@ async def update_antiraid(
             detail=f"Invalid action_on_raid. Must be one of: {', '.join(valid_actions)}"
         )
 
-    int_fields = ["join_threshold", "join_time_window", "min_account_age_days"]
     updates = {}
-    for field in int_fields:
-        if field in payload:
-            val = payload[field]
-            if not isinstance(val, int) or val < 0:
-                raise HTTPException(status_code=400, detail=f"{field} must be a non-negative integer.")
-            updates[field] = val
+    if "join_threshold" in payload:
+        try:
+            jt = int(payload["join_threshold"])
+            if jt < 2:
+                raise HTTPException(status_code=400, detail="join_threshold must be at least 2.")
+            updates["join_threshold"] = jt
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="join_threshold must be an integer.")
+
+    if "join_time_window" in payload:
+        try:
+            jw = int(payload["join_time_window"])
+            if jw < 2:
+                raise HTTPException(status_code=400, detail="join_time_window must be at least 2.")
+            updates["join_time_window"] = jw
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="join_time_window must be an integer.")
+
+    if "min_account_age_days" in payload:
+        try:
+            ma = int(payload["min_account_age_days"])
+            if ma < 0:
+                raise HTTPException(status_code=400, detail="min_account_age_days must be non-negative.")
+            updates["min_account_age_days"] = ma
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="min_account_age_days must be an integer.")
 
     if "enabled" in payload:
         updates["enabled"] = 1 if payload["enabled"] else 0
@@ -148,7 +170,7 @@ async def toggle_lockdown(
 
     bot = getattr(request.app.state, "bot", None)
     if bot:
-        cog = bot.get_cog("AntiRaidCog")
+        cog = bot.get_cog("AntiRaid")
         guild = bot.get_guild(guild_id)
         if cog and guild:
             if state:
@@ -218,9 +240,13 @@ async def update_verification(
     for field in id_fields:
         if field in payload:
             val = payload[field]
-            if val is not None and not isinstance(val, int):
-                raise HTTPException(status_code=400, detail=f"{field} must be an integer ID or null.")
-            updates[field] = val
+            if val is None or val == "":
+                updates[field] = None
+            else:
+                try:
+                    updates[field] = int(val)
+                except (ValueError, TypeError):
+                    raise HTTPException(status_code=400, detail=f"{field} must be a valid integer ID or null.")
 
     if updates:
         await db.update_guild_config(guild_id, **updates)
@@ -239,9 +265,14 @@ async def delete_warning_endpoint(
 ):
     require_admin(guild_id, request)
 
-    warning_id = payload.get("warning_id")
-    if not warning_id or not isinstance(warning_id, int):
+    raw_warn_id = payload.get("warning_id")
+    try:
+        warning_id = int(raw_warn_id)
+    except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail="warning_id must be a valid integer.")
 
-    await db.delete_warning(warning_id)
-    return {"status": "success", "deleted_warning_id": warning_id}
+    deleted = await db.delete_warning(warning_id, guild_id=guild_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Warning not found or does not belong to this guild.")
+
+    return {"status": "success", "deleted": True, "deleted_warning_id": warning_id}

@@ -1,10 +1,13 @@
 import os
 import time
 import secrets
+import logging
 from typing import Optional
 from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
+
+log = logging.getLogger("security-bot.web")
 
 from web.auth import (
     verify_password,
@@ -140,7 +143,7 @@ async def discord_oauth_start(request: Request):
 
 @pages_router.get("/auth/discord/callback")
 async def discord_callback(request: Request, code: Optional[str] = None, state: Optional[str] = None):
-    expected_state = request.session.get("oauth_state")
+    expected_state = request.session.pop("oauth_state", None)
     if not state or not expected_state or state != expected_state:
         return RedirectResponse(url="/login?error=oauth_failed", status_code=302)
 
@@ -162,7 +165,8 @@ async def discord_callback(request: Request, code: Optional[str] = None, state: 
         )
         request.session["user"] = user_profile
         return RedirectResponse(url="/", status_code=302)
-    except Exception:
+    except Exception as e:
+        log.error(f"Discord OAuth2 exchange failed: {e}", exc_info=True)
         return RedirectResponse(url="/login?error=oauth_failed", status_code=302)
 
 

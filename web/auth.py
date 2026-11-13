@@ -12,8 +12,8 @@ ADMINISTRATOR_PERMISSION = 0x8
 
 def verify_password(password: str) -> bool:
     """Validate dashboard master password against environment variable using constant-time comparison."""
-    expected = os.getenv("DASHBOARD_PASSWORD", "admin123")
-    if not password or not expected:
+    expected = os.getenv("DASHBOARD_PASSWORD")
+    if not expected or not password:
         return False
     return secrets.compare_digest(password.encode("utf-8"), expected.encode("utf-8"))
 

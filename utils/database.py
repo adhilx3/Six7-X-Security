@@ -321,10 +321,16 @@ async def get_warnings(guild_id: int, user_id: int = None, db_path: str = None) 
             return [dict(r) for r in rows]
 
 
-async def delete_warning(warning_id: int, db_path: str = None) -> bool:
+async def delete_warning(warning_id: int, guild_id: int = None, db_path: str = None) -> bool:
     path = _get_db_path(db_path)
     async with aiosqlite.connect(path) as db:
-        cur = await db.execute("DELETE FROM warnings WHERE id = ?", (warning_id,))
+        if guild_id is not None:
+            cur = await db.execute(
+                "DELETE FROM warnings WHERE id = ? AND guild_id = ?",
+                (warning_id, guild_id),
+            )
+        else:
+            cur = await db.execute("DELETE FROM warnings WHERE id = ?", (warning_id,))
         await db.commit()
         return cur.rowcount > 0
 

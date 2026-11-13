@@ -1,4 +1,4 @@
-// Toast notifications
+// Toast notifications (Safe DOM text insertion)
 function showToast(message, type = "success") {
     const container = document.getElementById("toast-container");
     if (!container) return;
@@ -6,7 +6,10 @@ function showToast(message, type = "success") {
     const toast = document.createElement("div");
     const bgClass = type === "success" ? "bg-emerald-600" : (type === "error" ? "bg-red-600" : "bg-blue-600");
     toast.className = `${bgClass} text-white px-4 py-3 rounded-lg shadow-xl text-sm font-medium flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0`;
-    toast.innerHTML = `<span>${message}</span>`;
+    
+    const textSpan = document.createElement("span");
+    textSpan.textContent = String(message);
+    toast.appendChild(textSpan);
 
     container.appendChild(toast);
     requestAnimationFrame(() => {
@@ -71,10 +74,18 @@ function renderTags() {
     bannedWords.forEach((word, idx) => {
         const tag = document.createElement("span");
         tag.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1e1f22] text-xs font-semibold text-gray-300 border border-[#35373c]";
-        tag.innerHTML = `
-            <span>${word}</span>
-            <button type="button" onclick="removeTag(${idx})" class="text-gray-400 hover:text-red-400 font-bold">&times;</button>
-        `;
+        
+        const textNode = document.createElement("span");
+        textNode.textContent = word;
+        tag.appendChild(textNode);
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "text-gray-400 hover:text-red-400 font-bold ml-1";
+        btn.innerHTML = "&times;";
+        btn.onclick = () => removeTag(idx);
+        tag.appendChild(btn);
+
         tagList.appendChild(tag);
     });
 }
@@ -124,8 +135,8 @@ async function toggleLockdown(guildId, currentState) {
 async function addWhitelist(guildId) {
     const input = document.getElementById("whitelist-target-id");
     const reasonInput = document.getElementById("whitelist-reason");
-    const targetId = parseInt(input.value);
-    if (!targetId) {
+    const targetId = input.value.trim();
+    if (!targetId || !/^\d+$/.test(targetId)) {
         showToast("Enter a valid numeric ID", "error");
         return;
     }
