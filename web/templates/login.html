@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Login | Six7 Security{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-12">
+    <div class="bg-discord-card border border-discord-border rounded-2xl p-8 shadow-2xl">
+        <div class="text-center mb-8">
+            <div class="w-14 h-14 rounded-2xl bg-discord-blurple/15 border border-discord-blurple/30 text-discord-blurple flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="shield-check" class="w-7 h-7"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white">Six7 Security Portal</h1>
+            <p class="text-sm text-gray-400 mt-1">Sign in to manage server defense protocols</p>
+        </div>
+
+        {% if error %}
+        <div class="mb-6 p-3.5 rounded-xl bg-discord-red/10 border border-discord-red/30 text-discord-red text-sm flex items-center gap-2.5">
+            <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+            <span>
+                {% if error == 'invalid_password' %}
+                Incorrect master password. Please verify and try again.
+                {% elif error == 'oauth_failed' %}
+                Discord authorization failed. Please try again.
+                {% else %}
+                Authentication failed.
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+
+        <!-- Password Login Form -->
+        <form action="/login" method="POST" class="space-y-4">
+            <div>
+                <label for="password" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                    Master Password
+                </label>
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        name="password" 
+                        id="password" 
+                        required 
+                        placeholder="••••••••••••"
+                        class="w-full px-4 py-2.5 rounded-xl bg-discord-dark border border-discord-border text-white placeholder-gray-500 focus:outline-none focus:border-discord-blurple transition text-sm"
+                    >
+                </div>
+            </div>
+
+            <button 
+                type="submit" 
+                class="w-full py-2.5 px-4 rounded-xl bg-discord-blurple hover:bg-discord-blurple/90 text-white font-semibold text-sm shadow-lg shadow-discord-blurple/25 transition duration-200 flex items-center justify-center gap-2"
+            >
+                <i data-lucide="key-round" class="w-4 h-4"></i>
+                Sign In with Password
+            </button>
+        </form>
+
+        {% if discord_oauth_enabled %}
+        <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-discord-border"></div></div>
+            <div class="relative flex justify-center text-xs uppercase"><span class="bg-discord-card px-3 text-gray-500 font-semibold">Or continue with</span></div>
+        </div>
+
+        <!-- Discord OAuth2 Login Button -->
+        <a 
+            href="/auth/discord" 
+            class="w-full py-2.5 px-4 rounded-xl bg-[#5865F2]/10 hover:bg-[#5865F2]/20 border border-[#5865F2]/30 text-white font-semibold text-sm transition duration-200 flex items-center justify-center gap-2.5"
+        >
+            <i data-lucide="bot" class="w-4 h-4 text-discord-blurple"></i>
+            Login with Discord
+        </a>
+        {% endif %}
+
+        <p class="text-center text-xs text-gray-500 mt-6">
+            Protected by Six7 Real-time Defense System
+        </p>
+    </div>
+</div>
+{% endblock %}

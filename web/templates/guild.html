@@ -1,0 +1,465 @@
+{% extends "base.html" %}
+
+{% block title %}{{ guild.name }} | Defense Panel{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Server Header & Emergency Status -->
+    <div class="bg-discord-card border border-discord-border rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+            {% if guild.icon %}
+            <img src="{{ guild.icon.url }}" alt="{{ guild.name }}" class="w-16 h-16 rounded-2xl object-cover border border-discord-border">
+            {% else %}
+            <div class="w-16 h-16 rounded-2xl bg-discord-dark border border-discord-border flex items-center justify-center text-discord-blurple font-bold text-2xl">
+                {{ guild.name[0]|upper }}
+            </div>
+            {% endif %}
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-bold text-white">{{ guild.name }}</h1>
+                    {% if antiraid_cfg.lockdown_active %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-bold badge-red animate-pulse flex items-center gap-1.5">
+                        <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                        LOCKDOWN ACTIVE
+                    </span>
+                    {% else %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-bold badge-green flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                        ONLINE & DEFENDING
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-gray-400 mt-1">ID: {{ guild.id }} &bull; {{ guild.member_count or 'Unknown' }} Members &bull; {{ guild.channels|length }} Channels</p>
+            </div>
+        </div>
+
+        <!-- Emergency Action Trigger -->
+        <div>
+            <button 
+                type="button" 
+                onclick="toggleLockdown({{ guild.id }}, {{ 'true' if antiraid_cfg.lockdown_active else 'false' }})"
+                class="px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg transition duration-200 flex items-center gap-2 {% if antiraid_cfg.lockdown_active %}bg-discord-green hover:bg-discord-green/90 text-white shadow-emerald-500/20{% else %}bg-discord-red hover:bg-discord-red/90 text-white shadow-red-500/20{% endif %}"
+            >
+                <i data-lucide="{% if antiraid_cfg.lockdown_active %}unlock{% else %}lock{% endif %}" class="w-4 h-4"></i>
+                {% if antiraid_cfg.lockdown_active %}Lift Emergency Lockdown{% else %}Emergency Lockdown{% endif %}
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex border-b border-discord-border gap-2 overflow-x-auto pb-1 custom-scrollbar">
+        <button id="btn-antinuke" onclick="showTab('antinuke')" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-[#35373c] flex items-center gap-2 transition">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+            Anti-Nuke
+        </button>
+        <button id="btn-antiraid" onclick="showTab('antiraid')" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white flex items-center gap-2 transition">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            Anti-Raid
+        </button>
+        <button id="btn-automod" onclick="showTab('automod')" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white flex items-center gap-2 transition">
+            <i data-lucide="message-square-off" class="w-4 h-4"></i>
+            AutoMod
+        </button>
+        <button id="btn-verification" onclick="showTab('verification')" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white flex items-center gap-2 transition">
+            <i data-lucide="badge-check" class="w-4 h-4"></i>
+            Verification
+        </button>
+        <button id="btn-warnings" onclick="showTab('warnings')" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white flex items-center gap-2 transition">
+            <i data-lucide="file-warning" class="w-4 h-4"></i>
+            Warnings ({{ warnings|length }})
+        </button>
+    </div>
+
+    <!-- TAB 1: Anti-Nuke -->
+    <div id="tab-antinuke" class="tab-content space-y-6">
+        <form id="form-antinuke" onsubmit="event.preventDefault(); saveAntinuke();" class="bg-discord-card border border-discord-border rounded-2xl p-6 shadow-sm space-y-6">
+            <div class="flex items-center justify-between pb-4 border-b border-discord-border/60">
+                <div>
+                    <h2 class="text-base font-bold text-white">Anti-Nuke Protection Thresholds</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Define maximum allowed administrative actions per 10-second rolling window</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="antinuke-enabled" {% if antinuke_cfg.enabled %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-discord-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-discord-blurple"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Max Channel Deletions</label>
+                    <input type="number" id="an-channels" min="1" max="20" value="{{ antinuke_cfg.max_channel_actions }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Max Role Deletions</label>
+                    <input type="number" id="an-roles" min="1" max="20" value="{{ antinuke_cfg.max_role_actions }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Max Kicks / Bans</label>
+                    <input type="number" id="an-members" min="1" max="20" value="{{ antinuke_cfg.max_member_actions }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Max Webhook Actions</label>
+                    <input type="number" id="an-webhooks" min="1" max="20" value="{{ antinuke_cfg.max_webhook_actions }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-discord-border/60">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Punishment Protocol</label>
+                    <select id="an-punishment" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                        <option value="strip_roles" {% if antinuke_cfg.punishment == 'strip_roles' %}selected{% endif %}>Strip Administrator Roles (Recommended)</option>
+                        <option value="ban" {% if antinuke_cfg.punishment == 'ban' %}selected{% endif %}>Instant Server Ban</option>
+                        <option value="kick" {% if antinuke_cfg.punishment == 'kick' %}selected{% endif %}>Kick Offender</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Action Time Window</label>
+                    <input type="number" id="an-window" min="3" max="60" value="{{ antinuke_cfg.action_window_seconds }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-discord-blurple hover:bg-discord-blurple/90 text-white font-semibold text-xs transition flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Save Anti-Nuke Settings
+                </button>
+            </div>
+        </form>
+
+        <!-- Whitelist Management Table -->
+        <div class="bg-discord-card border border-discord-border rounded-2xl p-6 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-discord-border/60">
+                <div>
+                    <h3 class="text-base font-bold text-white">Anti-Nuke Immunity Whitelist</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Trusted administrators or security bots exempt from rate limits</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="whitelist-target-id" placeholder="Discord User / Bot ID" class="px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-xs w-48">
+                    <input type="text" id="whitelist-reason" placeholder="Reason (e.g. Co-Owner)" class="px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-xs w-48 hidden md:block">
+                    <button type="button" onclick="addWhitelist({{ guild.id }})" class="px-3.5 py-2 rounded-xl bg-discord-blurple hover:bg-discord-blurple/90 text-white font-semibold text-xs transition flex items-center gap-1.5">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        Add
+                    </button>
+                </div>
+            </div>
+
+            {% if whitelist %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="text-gray-400 border-b border-discord-border/60 uppercase tracking-wider text-[11px]">
+                            <th class="py-2.5 px-3">Target ID</th>
+                            <th class="py-2.5 px-3">Reason</th>
+                            <th class="py-2.5 px-3">Added Date</th>
+                            <th class="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-discord-border/30">
+                        {% for w in whitelist %}
+                        <tr class="text-gray-300 hover:bg-discord-dark/40">
+                            <td class="py-3 px-3 font-mono text-discord-blurple">{{ w.target_id }}</td>
+                            <td class="py-3 px-3">{{ w.reason or 'No reason provided' }}</td>
+                            <td class="py-3 px-3 text-gray-500">{{ w.created_at[:10] if w.created_at else 'Unknown' }}</td>
+                            <td class="py-3 px-3 text-right">
+                                <button type="button" onclick="removeWhitelist({{ guild.id }}, {{ w.target_id }})" class="text-red-400 hover:text-red-300 font-medium">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-xs text-gray-500 py-3 text-center">No immunity whitelist entries configured.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- TAB 2: Anti-Raid -->
+    <div id="tab-antiraid" class="tab-content hidden space-y-6">
+        <form id="form-antiraid" onsubmit="event.preventDefault(); saveAntiraid();" class="bg-discord-card border border-discord-border rounded-2xl p-6 shadow-sm space-y-6">
+            <div class="flex items-center justify-between pb-4 border-b border-discord-border/60">
+                <div>
+                    <h2 class="text-base font-bold text-white">Anti-Raid & Mass Join Detection</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Mitigate raid attacks, automated bot waves, and alt accounts</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="antiraid-enabled" {% if antiraid_cfg.enabled %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-discord-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-discord-blurple"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Mass Join Threshold</label>
+                    <input type="number" id="ar-threshold" min="2" max="50" value="{{ antiraid_cfg.join_threshold }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                    <span class="text-[11px] text-gray-500 mt-1 block">Members joining within window</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Join Time Window (Seconds)</label>
+                    <input type="number" id="ar-window" min="3" max="60" value="{{ antiraid_cfg.join_time_window }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                    <span class="text-[11px] text-gray-500 mt-1 block">Detection sampling duration</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Min Account Age (Days)</label>
+                    <input type="number" id="ar-age" min="0" max="90" value="{{ antiraid_cfg.min_account_age_days }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                    <span class="text-[11px] text-gray-500 mt-1 block">Flag or action young accounts</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-discord-border/60">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Action on Raid Detected</label>
+                    <select id="ar-action" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                        <option value="kick" {% if antiraid_cfg.action_on_raid == 'kick' %}selected{% endif %}>Kick Joining Accounts</option>
+                        <option value="ban" {% if antiraid_cfg.action_on_raid == 'ban' %}selected{% endif %}>Ban Joining Accounts</option>
+                        <option value="timeout" {% if antiraid_cfg.action_on_raid == 'timeout' %}selected{% endif %}>Timeout Joining Accounts</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-3 pt-6">
+                    <input type="checkbox" id="ar-antibot" {% if antiraid_cfg.anti_bot_enabled %}checked{% endif %} class="w-4 h-4 rounded bg-discord-dark border-discord-border text-discord-blurple">
+                    <label for="ar-antibot" class="text-xs text-gray-300 font-semibold cursor-pointer">
+                        Block Unverified Bots from Joining Server
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-discord-blurple hover:bg-discord-blurple/90 text-white font-semibold text-xs transition flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Save Anti-Raid Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- TAB 3: AutoMod -->
+    <div id="tab-automod" class="tab-content hidden space-y-6">
+        <form id="form-automod" onsubmit="event.preventDefault(); saveAutomod();" class="bg-discord-card border border-discord-border rounded-2xl p-6 shadow-sm space-y-6">
+            <div class="flex items-center justify-between pb-4 border-b border-discord-border/60">
+                <div>
+                    <h2 class="text-base font-bold text-white">AutoMod Content Filtering</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Filter scams, dangerous file attachments, spam, and banned keywords</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="automod-enabled" {% if automod_cfg.enabled %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-discord-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-discord-blurple"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Banned Words Tag Manager -->
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Banned Words & Phrases</label>
+                <div class="p-3 rounded-xl bg-discord-dark border border-discord-border space-y-3">
+                    <div id="banned-words-tags" class="flex flex-wrap gap-2 min-h-[32px]"></div>
+                    <input 
+                        type="text" 
+                        id="banned-words-input" 
+                        placeholder="Type a word and press Enter or comma..." 
+                        class="w-full bg-transparent text-white text-xs placeholder-gray-500 focus:outline-none border-t border-discord-border/40 pt-2"
+                    >
+                </div>
+            </div>
+
+            <!-- Shields Toggles -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-discord-border/60">
+                <div class="p-4 rounded-xl bg-discord-dark border border-discord-border flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-white block">Phishing & Scam Links</span>
+                        <span class="text-[11px] text-gray-500">Block fake Steam/Nitro domains</span>
+                    </div>
+                    <input type="checkbox" id="am-scams" {% if automod_cfg.block_scams %}checked{% endif %} class="w-4 h-4 rounded text-discord-blurple bg-discord-card border-discord-border">
+                </div>
+
+                <div class="p-4 rounded-xl bg-discord-dark border border-discord-border flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-white block">Malicious Files</span>
+                        <span class="text-[11px] text-gray-500">Block .exe, .scr, .bat, .ps1</span>
+                    </div>
+                    <input type="checkbox" id="am-files" {% if automod_cfg.block_attachments %}checked{% endif %} class="w-4 h-4 rounded text-discord-blurple bg-discord-card border-discord-border">
+                </div>
+
+                <div class="p-4 rounded-xl bg-discord-dark border border-discord-border flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-white block">Discord Invites</span>
+                        <span class="text-[11px] text-gray-500">Block discord.gg links</span>
+                    </div>
+                    <input type="checkbox" id="am-invites" {% if automod_cfg.block_invites %}checked{% endif %} class="w-4 h-4 rounded text-discord-blurple bg-discord-card border-discord-border">
+                </div>
+            </div>
+
+            <!-- Spam Thresholds -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-discord-border/60">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Max Messages in 5 Seconds</label>
+                    <input type="number" id="am-spam-count" min="2" max="20" value="{{ automod_cfg.spam_message_count }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Max Caps Percentage (%)</label>
+                    <input type="number" id="am-caps" min="30" max="100" value="{{ automod_cfg.max_caps_percent }}" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-discord-blurple hover:bg-discord-blurple/90 text-white font-semibold text-xs transition flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Save AutoMod Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- TAB 4: Verification -->
+    <div id="tab-verification" class="tab-content hidden space-y-6">
+        <form id="form-verification" onsubmit="event.preventDefault(); saveVerification();" class="bg-discord-card border border-discord-border rounded-2xl p-6 shadow-sm space-y-6">
+            <div class="pb-4 border-b border-discord-border/60">
+                <h2 class="text-base font-bold text-white">Member Gate Verification</h2>
+                <p class="text-xs text-gray-400 mt-0.5">Control how new members gain access to your server</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Verification Mode</label>
+                    <select id="v-mode" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                        <option value="button" {% if guild_cfg.verification_type == 'button' %}selected{% endif %}>Single Button Click</option>
+                        <option value="captcha" {% if guild_cfg.verification_type == 'captcha' %}selected{% endif %}>Interactive Captcha Modal</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Verified Member Role</label>
+                    <select id="v-role" class="w-full px-3 py-2 rounded-xl bg-discord-dark border border-discord-border text-white text-sm">
+                        <option value="">None configured</option>
+                        {% for r in guild.roles %}
+                        {% if not r.is_default() %}
+                        <option value="{{ r.id }}" {% if guild_cfg.verification_role_id == r.id %}selected{% endif %}>@{{ r.name }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-discord-blurple hover:bg-discord-blurple/90 text-white font-semibold text-xs transition flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Save Verification Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- TAB 5: Warnings -->
+    <div id="tab-warnings" class="tab-content hidden space-y-6">
+        <div class="bg-discord-card border border-discord-border rounded-2xl p-6 shadow-sm space-y-4">
+            <div class="pb-4 border-b border-discord-border/60">
+                <h2 class="text-base font-bold text-white">Persistent Member Warnings</h2>
+                <p class="text-xs text-gray-400 mt-0.5">Review active infractions recorded across staff moderation actions</p>
+            </div>
+
+            {% if warnings %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="text-gray-400 border-b border-discord-border/60 uppercase tracking-wider text-[11px]">
+                            <th class="py-2.5 px-3">Case ID</th>
+                            <th class="py-2.5 px-3">Member ID</th>
+                            <th class="py-2.5 px-3">Reason</th>
+                            <th class="py-2.5 px-3">Moderator ID</th>
+                            <th class="py-2.5 px-3">Date</th>
+                            <th class="py-2.5 px-3 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-discord-border/30">
+                        {% for w in warnings %}
+                        <tr id="warning-row-{{ w.id }}" class="text-gray-300 hover:bg-discord-dark/40">
+                            <td class="py-3 px-3 font-mono text-gray-400">#{{ w.id }}</td>
+                            <td class="py-3 px-3 font-mono text-discord-blurple">{{ w.user_id }}</td>
+                            <td class="py-3 px-3 font-medium">{{ w.reason }}</td>
+                            <td class="py-3 px-3 font-mono text-gray-500">{{ w.moderator_id }}</td>
+                            <td class="py-3 px-3 text-gray-500">{{ w.created_at[:16] if w.created_at else 'Unknown' }}</td>
+                            <td class="py-3 px-3 text-right">
+                                <button type="button" onclick="deleteWarning({{ guild.id }}, {{ w.id }})" class="text-red-400 hover:text-red-300 font-semibold">
+                                    Revoke
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-xs text-gray-500 py-6 text-center">No active member warnings recorded in this server.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const GUILD_ID = {{ guild.id }};
+    initTagInput({{ automod_cfg.banned_words|tojson }});
+
+    async function saveAntinuke() {
+        try {
+            await postAPI(`/api/guild/${GUILD_ID}/antinuke`, {
+                enabled: document.getElementById("antinuke-enabled").checked,
+                max_channel_actions: parseInt(document.getElementById("an-channels").value),
+                max_role_actions: parseInt(document.getElementById("an-roles").value),
+                max_member_actions: parseInt(document.getElementById("an-members").value),
+                max_webhook_actions: parseInt(document.getElementById("an-webhooks").value),
+                action_window_seconds: parseInt(document.getElementById("an-window").value),
+                punishment: document.getElementById("an-punishment").value
+            });
+            showToast("Anti-Nuke settings saved!", "success");
+        } catch (e) {}
+    }
+
+    async function saveAntiraid() {
+        try {
+            await postAPI(`/api/guild/${GUILD_ID}/antiraid`, {
+                enabled: document.getElementById("antiraid-enabled").checked,
+                join_threshold: parseInt(document.getElementById("ar-threshold").value),
+                join_time_window: parseInt(document.getElementById("ar-window").value),
+                min_account_age_days: parseInt(document.getElementById("ar-age").value),
+                action_on_raid: document.getElementById("ar-action").value,
+                anti_bot_enabled: document.getElementById("ar-antibot").checked
+            });
+            showToast("Anti-Raid settings saved!", "success");
+        } catch (e) {}
+    }
+
+    async function saveAutomod() {
+        try {
+            await postAPI(`/api/guild/${GUILD_ID}/automod`, {
+                enabled: document.getElementById("automod-enabled").checked,
+                banned_words: bannedWords,
+                block_scams: document.getElementById("am-scams").checked,
+                block_attachments: document.getElementById("am-files").checked,
+                block_invites: document.getElementById("am-invites").checked,
+                spam_message_count: parseInt(document.getElementById("am-spam-count").value),
+                max_caps_percent: parseInt(document.getElementById("am-caps").value)
+            });
+            showToast("AutoMod settings saved!", "success");
+        } catch (e) {}
+    }
+
+    async function saveVerification() {
+        try {
+            const roleVal = document.getElementById("v-role").value;
+            await postAPI(`/api/guild/${GUILD_ID}/verification`, {
+                verification_type: document.getElementById("v-mode").value,
+                verification_role_id: roleVal ? parseInt(roleVal) : null
+            });
+            showToast("Verification settings saved!", "success");
+        } catch (e) {}
+    }
+</script>
+{% endblock %}

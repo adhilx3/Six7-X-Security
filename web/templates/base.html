@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Six7 Security Dashboard{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        discord: {
+                            blurple: '#5865F2',
+                            dark: '#1e1f22',
+                            darker: '#141517',
+                            card: '#2b2d31',
+                            input: '#1e1f22',
+                            border: '#35373c',
+                            green: '#23a55a',
+                            red: '#f23f43'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body class="bg-discord-darker text-gray-200 min-h-screen flex flex-col font-sans">
+    <!-- Navbar -->
+    <header class="border-b border-discord-border bg-discord-dark/95 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="/" class="flex items-center gap-2.5 font-bold text-lg text-white hover:opacity-90 transition">
+                    <div class="w-9 h-9 rounded-xl bg-discord-blurple flex items-center justify-center shadow-lg shadow-discord-blurple/30">
+                        <i data-lucide="shield-alert" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <span>Six7 <span class="text-discord-blurple">Security</span></span>
+                </a>
+                {% if guild %}
+                <span class="text-gray-600 hidden sm:inline">/</span>
+                <span class="text-sm font-semibold text-gray-300 hidden sm:inline flex items-center gap-1.5">
+                    <i data-lucide="server" class="w-4 h-4 text-discord-blurple"></i>
+                    {{ guild.name }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center gap-3">
+                {% if user %}
+                <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-discord-card border border-discord-border text-xs">
+                    <div class="w-2 h-2 rounded-full bg-discord-green animate-pulse"></div>
+                    <span class="font-medium text-gray-300">{{ user.username }}</span>
+                    {% if user.is_master_admin %}
+                    <span class="px-1.5 py-0.5 rounded bg-discord-blurple/20 text-discord-blurple text-[10px] font-bold uppercase tracking-wider">Master</span>
+                    {% endif %}
+                </div>
+                <a href="/logout" class="p-2 text-gray-400 hover:text-white hover:bg-discord-card rounded-lg transition" title="Log out">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Scripts -->
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
